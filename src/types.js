@@ -17,6 +17,14 @@ export const getYaolingById = id => {
     return sprite_map[id] || {};
 };
 
+export const getHeadImagePath = id => {
+    var data = getYaolingById(id);
+    if (data) {
+      return `./original/image/head/${data.ImgName}.png`;
+    } else {
+      return "./original/image/default-head.png";
+    }
+  }
 
 export const SPRITE_MAP = sprite_map;
 

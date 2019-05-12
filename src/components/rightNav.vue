@@ -59,7 +59,7 @@
                 size="mini"
                 v-model="settings.auto_extend"
                 @change="handleNumChange"
-                :min="1"
+                :min="0"
                 :max="20"
                 label="自动搜索范围"
               ></el-input-number>

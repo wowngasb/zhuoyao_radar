@@ -34,11 +34,14 @@ import RightNav from "@/components/rightNav";
 
 import util from "@/libs/util";
 import * as types from "@/types";
-import { setTimeout, clearInterval, setInterval } from "timers";
+import { setTimeout, clearInterval, setInterval, clearTimeout } from "timers";
 
 let socket = null;
 let map = null;
 let tickTimer = null;
+let cache = util.CacheFactory("get_1001_data", {
+  capacity: 1024 * 8
+});
 
 export default {
   name: "App",
@@ -53,7 +56,8 @@ export default {
       appVersion: types.APP_VERSION,
       debugStatus: "", // debug 信息
       debug: false,
-      sprite_map: {},  // 不追踪的数据
+      sprite_map: {}, // 不追踪的数据
+      sprite_ret: [],
       firstTime: true, // 首次连接socket标记
       currVersion: types.CUR_YAOLING_VERSION, //190508版本的json 如果有变动手动更新
       messageMap: new Map() // 缓存请求类型和id
@@ -61,6 +65,7 @@ export default {
   },
   created() {
     this.sprite_map = {}; // 不追踪的数据
+    this.debugCache = cache;
 
     tickTimer && clearInterval(tickTimer);
     tickTimer = setInterval(() => {
@@ -127,16 +132,12 @@ export default {
     /**
      * 缓存响应的类型和id
      */
-    genRequestId(type) {
-      let _time = new Date().getTime() % 1234567;
-      this.messageMap.set(`msg_${_time}`, type);
-      return _time;
-    },
-    /**
-     * 根据id找到请求的类型
-     */
-    getRequestTypeFromId(id) {
-      return this.messageMap.get(id);
+    genRequestId(type, args) {
+      args = args || {};
+      let _id = new Date().getTime() % 1234567;
+      this.messageMap.set(`msg_${_id}`, type);
+      this.messageMap.set(`args_${_id}`, args);
+      return _id;
     },
     /**
      * 消息响应
@@ -167,10 +168,11 @@ export default {
     handleMessage(data) {
       var requestid = data.requestid || "";
 
-      var _type = this.messageMap.get(`msg_${requestid}`);
-      if (_type) {
-        this.messageMap.delete(`msg_${requestid}`);
-      }
+      var _type = this.messageMap.get(`msg_${requestid}`) || "_unknown_";
+      var _args = this.messageMap.get(`args_${requestid}`) || {};
+
+      this.messageMap.delete(`msg_${requestid}`);
+      this.messageMap.delete(`args_${requestid}`);
 
       switch (_type) {
         case "10041":
@@ -180,9 +182,19 @@ export default {
           break;
         case "1001":
           data.sprite_list = data.sprite_list || [];
-          console.log("获取到妖灵", data.sprite_list.length);
-          this.notify(`获取到妖灵 ${data.sprite_list.length}, lng:${this.location.longitude.toFixed(3)}, lat:${this.location.latitude.toFixed(3)}`);
-          this.buildMarkersByData(data.sprite_list);
+          console.log("获取到妖灵", data.sprite_list.length, _args, {
+            max: util.geoMax(data.sprite_list),
+            min: util.geoMin(data.sprite_list)
+          });
+          this.notify(
+            `获取到妖灵 ${
+              data.sprite_list.length
+            }, lng:${this.location.longitude.toFixed(
+              3
+            )}, lat:${this.location.latitude.toFixed(3)}`
+          );
+          this.cacheSpriteList(cache, data, _args);
+          this.buildMarkersByData(data.sprite_list, _args);
           break;
         case "1002":
           console.log("获取到擂台数据", data);
@@ -203,42 +215,42 @@ export default {
     /**
      * 根据查询结果过滤数据，打标记
      */
-    buildMarkersByData(t) {
+    buildMarkersByData(sprite_list, args) {
       this.sprite_map = this.sprite_map || {};
 
-      t.forEach(item => {
+      sprite_list.forEach(item => {
         item.lifetime = item.lifetime;
 
         var t = util.time() - item.gentime;
         if (t <= 0 || t >= item.lifetime) {
-          console.log(
+          /* console.log(
             `skip mark sprite_id:${item.sprite_id}, t:${t}, gentime:${
               item.gentime
             }, lifetime:${item.lifetime}`
-          );
+          ); */
           return;
         }
 
         var _k = item.sprite_id + "_" + item.latitude + "," + item.longtitude;
-        if(this.sprite_map[_k]){
+        if (this.sprite_map[_k]) {
           this.sprite_map[_k].item = item;
-          this.sprite_map[_k].marker =  this.sprite_map[_k].marker || null;
-          return ;
+          this.sprite_map[_k].marker = this.sprite_map[_k].marker || null;
+          return;
         }
 
         var marker =
           this.settings.fit_all || this.fit.indexOf(item.sprite_id) >= 0
-            ? this.buildSpiteMarker(t, item)
+            ? this.buildSpiteMarker(map, t, item)
             : null;
         this.sprite_map[_k] = {
           marker: marker,
           item: item
         };
       });
-      this.notify("筛选成功!");
     },
     checkSpriteMap() {
       this.sprite_map = this.sprite_map || {};
+      var sprite_ret = [];
 
       Object.keys(this.sprite_map).forEach(k => {
         var val = this.sprite_map[k] || {};
@@ -260,7 +272,7 @@ export default {
           return;
         } else {
           if (!val.marker) {
-            val.marker = this.buildSpiteMarker(t, item);
+            val.marker = this.buildSpiteMarker(map, t, item);
           }
           val.marker.setVisible(true);
           var content = this.buildSpiteDecoration(t, item);
@@ -269,60 +281,44 @@ export default {
             new qq.maps.Point(0, 0)
           );
           val.marker.setDecoration(decoration);
+          sprite_ret.push({
+            i: id,
+            g: gentime,
+            l: lifetime,
+            j: item.latitude,
+            w: item.longtitude
+          });
         }
       });
+      this.sprite_ret = sprite_ret;
     },
-    buildSpiteDecoration(t, item) {
-      var c = item.lifetime - t;
-      var content = util.t2str(c);
-
-      var color = "red";
-      color = c > 5 * 60 ? "blue" : color;
-      color = c > 10 * 60 ? "black" : color;
-
-      return `<span style="font-size: 15px;font-weight: bolder;color:${color};" data-sprite_id="${
-        item.sprite_id
-      }">${content}</span>`;
-    },
-    buildSpiteMarker(t, item) {
-      var iconPath = this.getHeadImagePath(item);
-      var m = {
-        latitude: item.latitude / 1e6,
-        longitude: item.longtitude / 1e6,
-        iconPath: iconPath,
-        width: 40,
-        height: 40
+    dumpSpriteRet(){
+      var _i = Math.min(...this.sprite_ret.map(item => item.i));
+      var _g = Math.min(...this.sprite_ret.map(item => item.g));
+      var _l = Math.min(...this.sprite_ret.map(item => item.l));
+      var _j = Math.min(...this.sprite_ret.map(item => item.j));
+      var _w = Math.min(...this.sprite_ret.map(item => item.w));
+      var ret = {
+        _i,
+        _g,
+        _l,
+        _j,
+        _w,
+        j: this.location.longitude,
+        w: this.location.latitude,
+        v: this.appVersion,
+        h: this.currVersion,
+        list: this.sprite_ret.map(item => {
+          return [
+            item.i - _i,
+            item.g - _g,
+            item.l - _l,
+            item.j - _j,
+            item.w - _w,
+          ];
+        }),
       };
-
-      var icon = new qq.maps.MarkerImage(
-        m.iconPath,
-        new qq.maps.Size(40, 40),
-        null,
-        null,
-        new qq.maps.Size(40, 40)
-      );
-
-      var content = this.buildSpiteDecoration(t, item);
-      var decoration = new qq.maps.MarkerDecoration(
-        content,
-        new qq.maps.Point(0, 0)
-      );
-      var marker = new qq.maps.Marker({
-        decoration: decoration,
-        position: new qq.maps.LatLng(m.latitude, m.longitude),
-        map: map
-      });
-      marker.setIcon(icon);
-      return marker;
-    },
-    //根据妖灵信息获取其icon地址
-    getHeadImagePath(e) {
-      var a = types.getYaolingById(e.sprite_id);
-      if (a) {
-        return `./original/image/head/${a.ImgName}.png`;
-      } else {
-        return "./original/image/default-head.png";
-      }
+      return JSON.stringify(ret);
     },
     addStatus(str) {
       this.debugStatus += str + "<br>";
@@ -339,33 +335,104 @@ export default {
      * 获取妖灵数据
      */
     getYaolingInfo() {
+      this._getYaolingInfo(
+        util.convertLocation(this.location.longitude),
+        util.convertLocation(this.location.latitude)
+      );
+    },
+    _getYaolingInfo(longtitude, latitude) {
       var e = {
         request_type: "1001",
-        longtitude: util.convertLocation(this.location.longitude),
-        latitude: util.convertLocation(this.location.latitude),
-        requestid: this.genRequestId("1001"),
+        longtitude: longtitude,
+        latitude: latitude,
         platform: 0
       };
-      this.sendMessage(e, "1001");
+
+      e.requestid = this.genRequestId("1001", e);
+      this.tryUseCache(
+        cache,
+        e,
+        data => {
+          this.handleMessage(data);
+        },
+        () => {
+          this.sendMessage(e, "1001");
+        }
+      );
     },
     getSettingFileName() {
       var e = {
         request_type: "1004",
         cfg_type: 1,
-        requestid: this.genRequestId("10041"),
         platform: 0
       };
+
+      e.requestid = this.genRequestId("10041", e);
       this.sendMessage(e, "10041");
     }
   },
   computed: {
     ...Vuex.mapState(["settings", "location", "userLocation"]),
-    extendList(){
-      if(this.settings.auto_extend == 1){
-        return [];
-      } else {
+    extendList() {
+      var auto_extend = parseInt(this.settings.auto_extend);
+      if (auto_extend <= 0) {
         return [];
       }
+      var tSep = 5000;
+      var gSeq = 12000;
+
+      var _ret = [];
+      for (let aIdx = -auto_extend; aIdx <= auto_extend; aIdx++) {
+        for (let bIdx = -auto_extend; bIdx <= auto_extend; bIdx++) {
+          if (aIdx == 0 && bIdx == 0) {
+            continue;
+          }
+          _ret.push({
+            aIdx,
+            bIdx,
+            longtitude:
+              util.convertLocation(this.location.longitude) + bIdx * gSeq,
+            latitude: util.convertLocation(this.location.latitude) + aIdx * gSeq
+          });
+        }
+      }
+
+      var dIdx = 0;
+      var ret = [];
+      for (let idx = 1; idx <= auto_extend; idx++) {
+        for (let _idx = -idx; _idx <= idx; _idx++) {
+          var tmp = _ret.filter(
+            item =>
+              !item.delay && item.aIdx == _idx && Math.abs(item.bIdx) <= idx
+          );
+          tmp.forEach(item => {
+            dIdx += 1;
+            var delay = dIdx * tSep;
+            item.delay = delay;
+
+            if (ret.length == _ret.length - 1) {
+              item.timer = setTimeout(() => {
+                console.log("auto_extend", delay, item);
+                this._getYaolingInfo(item.longtitude, item.latitude);
+              }, tSep + delay);
+              item.timer = setTimeout(() => {
+                console.log("auto_extend", delay, item);
+                this._getYaolingInfo(item.longtitude, item.latitude);
+
+                console.warn("auto_extend reload");
+                this.$store.commit(types.SETTINGS, { settings: this.settings });
+              }, tSep + delay);
+            } else {
+              item.timer = setTimeout(() => {
+                console.log("auto_extend", delay, item);
+                this._getYaolingInfo(item.longtitude, item.latitude);
+              }, tSep + delay);
+            }
+            ret.push(item);
+          });
+        }
+      }
+      return ret;
     },
     fit() {
       let ans = [];
@@ -373,7 +440,12 @@ export default {
         var value = this.settings[item[0]] || [];
         ans = ans.concat(value);
       });
-      return Array.from(new Set(ans));;
+      return Array.from(new Set(ans));
+    }
+  },
+  watch: {
+    extendList(newVal, oldVal) {
+      oldVal.forEach(item => clearTimeout(item.timer));
     }
   }
 };
