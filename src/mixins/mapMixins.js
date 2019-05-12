@@ -48,7 +48,7 @@ export default {
           latitude
         }
       });
-
+      this.notify(`初始化位置 lng:${this.userLocation.longitude.toFixed(3)}, lat:${this.userLocation.latitude.toFixed(3)}`);
       var pos = new qq.maps.LatLng(latitude, longitude);
 
       map.panTo(pos);

@@ -180,7 +180,8 @@ export default {
           break;
         case "1001":
           data.sprite_list = data.sprite_list || [];
-          console.log("获取到妖灵数量", data.sprite_list.length);
+          console.log("获取到妖灵", data.sprite_list.length);
+          this.notify(`获取到妖灵 ${data.sprite_list.length}, lng:${this.location.longitude.toFixed(3)}, lat:${this.location.latitude.toFixed(3)}`);
           this.buildMarkersByData(data.sprite_list);
           break;
         case "1002":
@@ -359,6 +360,13 @@ export default {
   },
   computed: {
     ...Vuex.mapState(["settings", "location", "userLocation"]),
+    extendList(){
+      if(this.settings.auto_extend == 1){
+        return [];
+      } else {
+        return [];
+      }
+    },
     fit() {
       let ans = [];
       types.FILTER_DATA.forEach(item => {

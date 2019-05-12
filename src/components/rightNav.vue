@@ -50,8 +50,19 @@
           <div class="header">设置</div>
           <ul>
             <li>
-              <span class="tag">点击地图自动搜索</span>
+              <span class="tag">点击自动搜索</span>
               <el-switch v-model="settings.auto_search"></el-switch>
+            </li>
+            <li>
+              <span class="tag">自动搜索范围</span>
+              <el-input-number
+                size="mini"
+                v-model="settings.auto_extend"
+                @change="handleNumChange"
+                :min="1"
+                :max="20"
+                label="自动搜索范围"
+              ></el-input-number>
             </li>
           </ul>
         </div>
@@ -154,6 +165,9 @@ export default {
           }
         });
       }
+    },
+    handleNumChange() {
+      this.$store.commit(types.SETTINGS, { settings: this.settings });
     },
     toggleMenu() {
       this.showMenu ? this.closeMenu() : this.openMenu();
