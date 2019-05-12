@@ -1,24 +1,16 @@
-/**
- * author: 
- * date: 2018-08-09 17:10:51
- * desc:
- */
 import Vue from 'vue';
-import App from './App';
+import Vuex from 'vuex';
 import Element from 'element-ui';
-import './index.less';
-import '../node_modules/element-ui/lib/theme-chalk/index.css';
 
+import '@/index.less';
+import App from '@/app';
+import store from '@/store/index';
+
+Vue.use(Vuex);
 Vue.use(Element, { size: 'medium' });
 
-let vueapp = new Vue({
+window.app = new Vue({
+  store: new Vuex.Store(store),
   el: '#root',
-  template: '<App/>',
-  components: { App }
+  render: h => h(App)
 });
-
-window.app = {
-  botSetup:params => {
-    vueapp.$children[0].botSetup(params);
-  }
-};
