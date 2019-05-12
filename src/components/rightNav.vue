@@ -83,7 +83,7 @@ export default {
       type: String,
       default: ""
     },
-    currVersion: {
+    curVersion: {
       type: String,
       default: ""
     }

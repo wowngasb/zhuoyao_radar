@@ -3,13 +3,13 @@
     id="root"
     class="radar-app"
     :data-version="appVersion"
-    :data-currVersion="currVersion"
+    :data-curVersion="curVersion"
     :data-longitude="location.longitude"
     :data-latitude="location.latitude"
     :data-longitude_u="userLocation.longitude"
     :data-latitude_u="userLocation.latitude"
   >
-    <right-nav :version="appVersion" :currVersion="currVersion"></right-nav>
+    <right-nav :version="appVersion" :curVersion="curVersion"></right-nav>
     <div class="radar-status" v-show="debug">
       <div class="radar-info">
         <br>
@@ -59,7 +59,7 @@ export default {
       sprite_map: {}, // 不追踪的数据
       sprite_ret: [],
       firstTime: true, // 首次连接socket标记
-      currVersion: types.CUR_YAOLING_VERSION, //190508版本的json 如果有变动手动更新
+      curVersion: types.CUR_YAOLING_VERSION, //190508版本的json 如果有变动手动更新
       messageMap: new Map() // 缓存请求类型和id
     };
   },
@@ -125,7 +125,7 @@ export default {
     });
 
     this.addStatus(`捉妖雷达Web版 <br/>
-      currVersion:${this.currVersion}
+      curVersion:${this.curVersion}
       版本:${this.appVersion} <br/>`);
   },
   methods: {
@@ -205,10 +205,8 @@ export default {
       }
     },
     getVersionFileName(name) {
-      if (name != this.currVersion) {
-        console.info(
-          `有新版本的 name:${name} currVersion:${this.currVersion} !`
-        );
+      if (name != this.curVersion) {
+        console.info(`有新版本的 name:${name} curVersion:${this.curVersion} !`);
         this.notify("有新版本的妖灵库，请通知作者更新！！");
       }
     },
@@ -292,33 +290,15 @@ export default {
       });
       this.sprite_ret = sprite_ret;
     },
-    dumpSpriteRet(){
-      var _i = Math.min(...this.sprite_ret.map(item => item.i));
-      var _g = Math.min(...this.sprite_ret.map(item => item.g));
-      var _l = Math.min(...this.sprite_ret.map(item => item.l));
-      var _j = Math.min(...this.sprite_ret.map(item => item.j));
-      var _w = Math.min(...this.sprite_ret.map(item => item.w));
-      var ret = {
-        _i,
-        _g,
-        _l,
-        _j,
-        _w,
-        j: this.location.longitude,
-        w: this.location.latitude,
-        v: this.appVersion,
-        h: this.currVersion,
-        list: this.sprite_ret.map(item => {
-          return [
-            item.i - _i,
-            item.g - _g,
-            item.l - _l,
-            item.j - _j,
-            item.w - _w,
-          ];
-        }),
-      };
-      return JSON.stringify(ret);
+    dumpSpriteRet(tag) {
+      return util.dumpPageJson(
+        this.appVersion,
+        this.curVersion,
+        this.sprite_ret,
+        this.location,
+        this.settings,
+        tag
+      );
     },
     addStatus(str) {
       this.debugStatus += str + "<br>";

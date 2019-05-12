@@ -1,3 +1,5 @@
+import pako from "pako";
+
 function CacheFactory(cacheId, option) {
   var caches = {};
 
@@ -1774,5 +1776,42 @@ util.geoMin = list => {
   }
 };
 
+util.dumpPageJson = (appVersion, curVersion, sprite_ret, location, settings, tag) => {
+  sprite_ret = sprite_ret.sort((a, b) => a.j - b.j);
 
+  tag = tag || 1;
+  var _i = Math.min(...sprite_ret.map(item => item.i));
+  var _g = Math.min(...sprite_ret.map(item => item.g));
+  var _l = Math.min(...sprite_ret.map(item => item.l));
+  var _j = Math.min(...sprite_ret.map(item => item.j));
+  var _w = Math.min(...sprite_ret.map(item => item.w));
+  var ret = {
+    _i,
+    _g,
+    _l,
+    _j,
+    _w,
+    j: location.longitude,
+    w: location.latitude,
+    v: appVersion,
+    h: curVersion,
+    s: settings,
+    list: sprite_ret.map(item => {
+      return [
+        item.i - _i,
+        item.g - _g,
+        item.l - _l,
+        item.j - _j,
+        item.w - _w,
+      ];
+    }),
+  };
+  if (tag == 1) {
+    return JSON.stringify(ret);
+  } else if (tag == 2) {
+    return pako.deflate(JSON.stringify(ret), { to: 'string' });
+  } else if (tag == 3) {
+    return util.base64encode(pako.deflate(JSON.stringify(ret), { to: 'string' }));
+  }
+}
 export default util;
