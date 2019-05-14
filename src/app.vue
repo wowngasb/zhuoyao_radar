@@ -51,6 +51,7 @@ export default {
   },
   clickMarker: null, // 点击位置标记
   userMarker: null, // 用户位置标记
+  circleMarker: null,
   data() {
     return {
       appVersion: types.APP_VERSION,
@@ -182,10 +183,31 @@ export default {
           break;
         case "1001":
           data.sprite_list = data.sprite_list || [];
+          var center = new qq.maps.LatLng(
+            _args.latitude / 1e6,
+            _args.longtitude / 1e6
+          );
+          var maxDis = util.geoMaxDistance(
+            data.sprite_list,
+            (latitude, longtitude) => {
+              return qq.maps.geometry.spherical.computeDistanceBetween(
+                center,
+                new qq.maps.LatLng(latitude / 1e6, longtitude / 1e6)
+              );
+            }
+          );
           console.log("获取到妖灵", data.sprite_list.length, _args, {
-            max: util.geoMax(data.sprite_list),
-            min: util.geoMin(data.sprite_list)
+            dis: maxDis.toFixed(3)
           });
+
+          this.circleMarker && this.circleMarker.setMap(null);
+          this.circleMarker = new qq.maps.Circle({
+            map: map,
+            center: center,
+            radius: maxDis,
+            strokeWeight: 2
+          });
+
           this.notify(
             `获取到妖灵 ${
               data.sprite_list.length
@@ -359,20 +381,20 @@ export default {
         return [];
       }
       var tSep = 5000;
-      var gSeq = 12000;
+      var gSeq = 20000;
 
       var _ret = [];
-      for (let aIdx = -auto_extend; aIdx <= auto_extend; aIdx++) {
-        for (let bIdx = -auto_extend; bIdx <= auto_extend; bIdx++) {
-          if (aIdx == 0 && bIdx == 0) {
+      for (let yIdx = -auto_extend; yIdx <= auto_extend; yIdx++) {
+        for (let xIdx = -auto_extend; xIdx <= auto_extend; xIdx++) {
+          if (yIdx == 0 && xIdx == 0) {
             continue;
           }
           _ret.push({
-            aIdx,
-            bIdx,
+            yIdx,
+            xIdx,
             longtitude:
-              util.convertLocation(this.location.longitude) + bIdx * gSeq,
-            latitude: util.convertLocation(this.location.latitude) + aIdx * gSeq
+              util.convertLocation(this.location.longitude) + xIdx * gSeq,
+            latitude: util.convertLocation(this.location.latitude) + yIdx * gSeq
           });
         }
       }
@@ -380,11 +402,17 @@ export default {
       var dIdx = 0;
       var ret = [];
       for (let idx = 1; idx <= auto_extend; idx++) {
-        for (let _idx = -idx; _idx <= idx; _idx++) {
+        var fList = [
+          [(x, y) => Math.abs(x) <= idx && y == -idx, l => l],
+          [(x, y) => Math.abs(y) <= idx && x == idx, l => l],
+          [(x, y) => Math.abs(x) <= idx && y == idx, l => l.reverse()],
+          [(x, y) => Math.abs(y) <= idx && x == -idx, l => l.reverse()]
+        ];
+        fList.forEach(fItem => {
           var tmp = _ret.filter(
-            item =>
-              !item.delay && item.aIdx == _idx && Math.abs(item.bIdx) <= idx
+            item => !item.delay && fItem[0](item.xIdx, item.yIdx)
           );
+          tmp = fItem[1](tmp);
           tmp.forEach(item => {
             dIdx += 1;
             var delay = dIdx * tSep;
@@ -401,6 +429,7 @@ export default {
 
                 console.warn("auto_extend reload");
                 this.$store.commit(types.SETTINGS, { settings: this.settings });
+                this.getYaolingInfo();
               }, tSep + delay);
             } else {
               item.timer = setTimeout(() => {
@@ -410,7 +439,8 @@ export default {
             }
             ret.push(item);
           });
-        }
+        });
+        for (let _idx = -idx; _idx <= idx; _idx++) {}
       }
       return ret;
     },

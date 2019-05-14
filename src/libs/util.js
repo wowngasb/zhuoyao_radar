@@ -1776,27 +1776,35 @@ util.geoMin = list => {
   }
 };
 
-util.dumpPageJson = (appVersion, curVersion, sprite_ret, location, settings, tag) => {
-  sprite_ret = sprite_ret.sort((a, b) => a.j - b.j);
+util.geoMaxDistance = (list, func) => {
+  var distance = list.map(item => func(item.latitude, item.longtitude) );
+  return Math.max(...distance);
+};
 
+util.dumpPageJson = (appVersion, curVersion, sprite_ret, location, settings, tag) => {
+  sprite_ret = sprite_ret || [];
   tag = tag || 1;
-  var _i = Math.min(...sprite_ret.map(item => item.i));
-  var _g = Math.min(...sprite_ret.map(item => item.g));
-  var _l = Math.min(...sprite_ret.map(item => item.l));
-  var _j = Math.min(...sprite_ret.map(item => item.j));
-  var _w = Math.min(...sprite_ret.map(item => item.w));
+  var _i = sprite_ret.length ? Math.min(...sprite_ret.map(item => item.i)) : 0;
+  var _g = sprite_ret.length ? Math.min(...sprite_ret.map(item => item.g)) : 0;
+  var _l = sprite_ret.length ? Math.min(...sprite_ret.map(item => item.l)) : 0;
+  var _j = sprite_ret.length ? Math.min(...sprite_ret.map(item => item.j)) : 0;  
+  var _w = sprite_ret.length ? Math.min(...sprite_ret.map(item => item.w)) : 0;
   var ret = {
     _i,
     _g,
     _l,
     _j,
     _w,
-    j: location.longitude,
-    w: location.latitude,
-    v: appVersion,
-    h: curVersion,
-    s: settings,
-    list: sprite_ret.map(item => {
+    j: parseInt(location.longitude * 1e6) - _j,
+    w: parseInt(location.latitude * 1e6) - _w,
+    fel: (settings.fit_element || []).map(i => i - _i),
+    ffe: (settings.fit_feature || []).map(i => i - _i),
+    ffi: (settings.fit_fish || []).map(i => i - _i),
+    fne: (settings.fit_nest || []).map(i => i - _i),
+    fra: (settings.fit_rare || []).map(i => i - _i),
+    ft1: (settings.fit_t1 || []).map(i => i - _i),
+    ft2: (settings.fit_t2 || []).map(i => i - _i),
+    ll: sprite_ret.map(item => {
       return [
         item.i - _i,
         item.g - _g,
