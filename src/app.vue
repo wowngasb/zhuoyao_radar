@@ -229,6 +229,7 @@ export default {
     getVersionFileName(name) {
       if (name != this.curVersion) {
         console.info(`有新版本的 name:${name} curVersion:${this.curVersion} !`);
+        console.log('https://hy.gwgo.qq.com/sync/pet/config/' + name);
         this.notify("有新版本的妖灵库，请通知作者更新！！");
       }
     },

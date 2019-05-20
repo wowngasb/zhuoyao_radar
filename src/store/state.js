@@ -3,16 +3,16 @@ import * as types from "@/types";
 
 export default {
     location: {
-        ...util.getDefaultLocation(),
+        ...types.getDefaultLocation(),
         ...util.getStorage('userLocation')
     },
     userLocation: {
-        ...util.getDefaultLocation(),
+        ...types.getDefaultLocation(),
         ...util.getStorage('userLocation')
     },
     hasSettings: !util.empty(util.getStorage('settings')),
     settings: {
-        ...util.getDefaultSetting(),
+        ...types.getDefaultSetting(),
         ...(util.getStorage('settings') || {})
     }
 }
