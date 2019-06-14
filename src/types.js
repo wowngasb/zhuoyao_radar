@@ -28,8 +28,8 @@ export const getHeadImagePath = id => {
 
 export const SPRITE_MAP = sprite_map;
 
-export const CUR_YAOLING_VERSION = 'sprite_0e4ebf1344bf35582f7504ee265f32eb.json'; // 妖灵数据库版本，如果与官方版本不一致，需要手动更新
-export const APP_VERSION = 'v0.8.511.1820'; // 地图版本
+export const CUR_YAOLING_VERSION = 'sprite_18b3306a1d7dda37b41d2d458e00a0a8.json'; // 妖灵数据库版本，如果与官方版本不一致，需要手动更新
+export const APP_VERSION = 'v0.9.0614'; // 版本
 export const API_KEY = '2LWBZ-FEQK6-KKYS2-M6WR4-PFGS5-RZBP3'; // 地图 api key
 
 export const FILTER = {
@@ -43,13 +43,15 @@ export const FILTER = {
         2000078, // 布鲁
         2000191, // 麻将仔
         2000242, // 夜行枭
-        2000147, // 檐上喵
-        2000188 // CoCo熊   todo: 檐上喵&CoCo熊官方雷达貌似不提供搜索
+        2000028, //小蝌蚪
+        2000419 //花火羊
     ],
     FILTER_NEST: [
         2000321, // 木偶娃娃
         2000324, // 瓷偶娃娃
-        2000112 // 雷童子
+        2000112, // 雷童子
+        2000413, //兜兜犴
+        2000416, //淘奇蛇
     ],
     FILTER_FEATURE: [
         2004013, // 暴走小龙虾
