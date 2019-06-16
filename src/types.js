@@ -13,6 +13,29 @@ let sprite_map = {};
     }
 });
 
+export const getDefaultLocation = () => {
+    return {
+      longitude: 116.3579177856,
+      latitude: 39.9610780334
+    };
+  }
+
+export const getDefaultSetting = () => {
+    return {
+      auto_extend: 0,
+      fit_t0: [],  // 0觉
+      fit_t1: [],  // 1觉
+      fit_t2: [],  // 2觉
+      fit_nest: [],  // 巢穴
+      fit_rare: [2000106, 2000313, 2000327, 2000238, 2000265],  // 稀有
+      fit_fish: [],  // 鲲鲲
+      fit_feature: [],  // 地域
+      fit_element: [],  // 元素
+      fit_all: false,  // 所有
+      auto_search: true
+    };
+  }
+
 export const getYaolingById = id => {
     return sprite_map[id] || {};
 };
@@ -74,6 +97,11 @@ export const FILTER = {
         2000514, // 火元宝宝
         2000515 // 土元宝宝
     ],
+    FILTER_T0: tempdata.Data.filter(item => {
+        return item.Level === 1;
+    }).map(item => {
+        return item.Id;
+    }),
     FILTER_T1: tempdata.Data.filter(item => {
         return item.Level === 2;
     }).map(item => {
@@ -92,6 +120,7 @@ export const FILTER_DATA = [
     ["fit_feature", "地域", FILTER.FILTER_FEATURE],
     ["fit_element", "元素", FILTER.FILTER_ELEMENT],
     ["fit_fish", "鲲鲲", FILTER.FILTER_FISH],
+    ["fit_t0", "0觉", FILTER.FILTER_T0],
     ["fit_t1", "1觉", FILTER.FILTER_T1],
     ["fit_t2", "2觉", FILTER.FILTER_T2]
   ];

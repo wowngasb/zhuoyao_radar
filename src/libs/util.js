@@ -151,13 +151,6 @@ var util = {
 
 util.j = o => JSON.parse(JSON.stringify(o));
 
-util.getDefaultLocation = () => {
-  return {
-    longitude: 116.3579177856,
-    latitude: 39.9610780334
-  };
-}
-
 util.getStorage = key => {
   let _key = 'radar_ex_' + key;
   if (localStorage && localStorage[_key]) {
@@ -173,20 +166,6 @@ util.setStorage = (key, val) => {
   }
 };
 
-util.getDefaultSetting = () => {
-  return {
-    auto_extend: 0,
-    fit_t1: [],  // 1觉
-    fit_t2: [],  // 2觉
-    fit_nest: [],  // 巢穴
-    fit_rare: [2000106, 2000313, 2000327, 2000238, 2000265],  // 稀有
-    fit_fish: [],  // 鲲鲲
-    fit_feature: [],  // 地域
-    fit_element: [],  // 元素
-    fit_all: false,  // 所有
-    auto_search: true
-  };
-}
 
 util.utf8ByteToUnicodeStr = n => {
   for (var g = '', p = 0; p < n.length;) {
@@ -1802,6 +1781,7 @@ util.dumpPageJson = (appVersion, curVersion, sprite_ret, location, settings, tag
     ffi: (settings.fit_fish || []).map(i => i - _i),
     fne: (settings.fit_nest || []).map(i => i - _i),
     fra: (settings.fit_rare || []).map(i => i - _i),
+    ft0: (settings.fit_t0 || []).map(i => i - _i),
     ft1: (settings.fit_t1 || []).map(i => i - _i),
     ft2: (settings.fit_t2 || []).map(i => i - _i),
     ll: sprite_ret.map(item => {
